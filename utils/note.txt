@@ -1,0 +1,61 @@
+# TODO
+1. Change the inference pipeline and inference dataloader to intigrate find_target_dim function.
+2. The pre does not read due to a parameter called pre_module False. Check when run for model with pre module
+
+Here's a concise note summarizing the performance optimizations for your project. You can copy this to a `.txt` file.
+
+---
+
+### **Performance Optimization Notes**
+
+#### **1. Training Optimizations**
+- **Mixed Precision Training**: Use `torch.cuda.amp` for reduced memory usage and faster computation.
+  - Wrap forward/backward passes in `autocast`.
+  - Use `GradScaler` for gradient scaling.
+
+- **Data Loading**:
+  - Set `num_workers` in `DataLoader` for parallel data loading.
+  - Use `pin_memory=True` for faster data transfer to GPU.
+
+- **Gradient Accumulation**:
+  - Accumulate gradients over multiple steps to simulate larger batch sizes.
+
+- **Profiling**:
+  - Use `torch.profiler` to identify bottlenecks and optimize.
+
+---
+
+#### **2. Validation (Testing) Optimizations**
+- **Disable Gradients**:
+  - Use `torch.no_grad()` during validation to save memory and computation.
+
+- **Distributed Validation**:
+  - Parallelize validation across multiple GPUs for large datasets.
+
+---
+
+#### **3. Inference Optimizations**
+- **Quantization**:
+  - Convert the model to `int8` using PyTorch's dynamic quantization for faster inference and reduced memory usage.
+
+- **Model Export**:
+  - Export the model to:
+    - **TorchScript** for efficient deployment: `torch.jit.script`.
+    - **ONNX** for cross-platform compatibility.
+
+- **Batch Inference**:
+  - Process data in batches to maximize GPU utilization.
+
+- **Efficient Data Handling**:
+  - Use memory-mapped files (`mmap_mode='r'`) for large `.npy` datasets.
+
+---
+
+#### **4. General Recommendations**
+- **Unified AMP**: Apply `autocast` in training, validation, and inference pipelines.
+- **Reuse Data Pipeline**: Use the same optimized data loader for all stages.
+- **Benchmark Changes**: Test each optimization step for measurable performance gains.
+
+---
+
+This note serves as a checklist for future exploration and implementation of performance optimizations.

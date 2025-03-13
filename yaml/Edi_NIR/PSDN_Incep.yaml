@@ -1,0 +1,31 @@
+train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_NIR/train/
+val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_NIR/val/
+test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_NIR/test/
+
+class_names: 
+  - Background
+  - PE
+  - PP
+  - PET
+  - PS
+  - PVC
+  - PMMA
+  - ABS
+  - PC
+  - Others
+
+model_name: PSDN Inception
+model_arguments:
+  num_classes:  10
+  pre_module: True
+  input_size:  4000
+
+loss_name: cross_entropy
+loss_arguments:
+
+optimizer_name: 'adam'
+optimizer_arguments:
+  lr:  0.01
+  # betas:  [0.9, 0.999]
+  # eps:  1e-8
+  # weight_decay: 0.0

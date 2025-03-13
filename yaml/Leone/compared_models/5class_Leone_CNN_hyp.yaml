@@ -1,0 +1,8 @@
+epochs: 500
+batch_size: 32
+test_batch_size: 1
+check_epoch: 10
+lr_decay: 0.5 # Scheduler parameter, learning rate decay factor
+step_size: 500 # Scheduler parameter, change learning rate after {step_size} epochs
+FC: False
+data_names: 

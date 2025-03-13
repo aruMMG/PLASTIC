@@ -1,0 +1,24 @@
+train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Jeon/group2/preprocessed/train/
+val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Jeon/group2/preprocessed/val/
+test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Jeon/group2/preprocessed/test/
+
+class_names: 
+  - PE
+  - PET
+  - PP
+  - PS
+
+model_name: ANN
+model_arguments:
+  input_size: 4000
+  num_classes:  4
+
+loss_name: cross_entropy
+loss_arguments:
+
+optimizer_name: 'adam'
+optimizer_arguments:
+  lr:  0.01
+  # betas:  [0.9, 0.999]
+  # eps:  1e-8
+  # weight_decay: 0.0

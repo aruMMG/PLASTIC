@@ -1,0 +1,26 @@
+train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/warwick/baseline/7/train/
+val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/warwick/baseline/7/val/
+test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/warwick/baseline/7/val/
+
+class_names: 
+  - HDPE
+  - PP_new
+  - PET
+  - LDPE
+
+
+model_name: ANN
+model_arguments:
+  input_size: 4000
+  num_classes:  4
+  pre_module: False
+
+loss_name: cross_entropy
+loss_arguments:
+
+optimizer_name: 'adam'
+optimizer_arguments:
+  lr:  0.01
+  # betas:  [0.9, 0.999]
+  # eps:  1e-8
+  # weight_decay: 0.0

@@ -1,0 +1,35 @@
+train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/baseline/train_test/5/train/
+test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/baseline/train_test/5/test/
+
+class_names: 
+  - PE
+  - PP
+  - PET
+  - PS
+  - PVC
+  - PMMA
+  - ABS
+  - PC
+  - Others
+
+model_name: Transformer
+model_arguments:
+  num_transformer_layers: 3
+  input_size:  400
+  num_classes:  10
+  mlp_size:  64
+  patch_size:  20
+  embedding_dim:  20
+  num_heads:  4
+  pre_module: False
+
+
+loss_name: cross_entropy
+loss_arguments:
+
+optimizer_name: 'adam'
+optimizer_arguments:
+  lr:  0.01
+  # betas:  [0.9, 0.999]
+  # eps:  1e-8
+  # weight_decay: 0.0

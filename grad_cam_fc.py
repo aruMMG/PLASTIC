@@ -1,0 +1,313 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+from models.models import ModelFactory
+from Datasets.dataset import create_dataloader
+from c3 import heatmap_plot
+def target_category_loss(x, category_index, nb_classes):
+    return torch.mul(x, F.one_hot(category_index, nb_classes))
+
+def target_category_loss_output_shape(input_shape):
+    return input_shape
+
+
+def normalize(x):
+    # utility function to normalize a tensor by its L2 norm
+    return x / (torch.sqrt(torch.mean(torch.square(x))) + 1e-5)
+
+class ActivationsAndGradients:
+    """ Class for extracting activations and
+    registering gradients from targetted intermediate layers """
+
+    def __init__(self, model, target_layer):
+        self.model = model
+        self.gradients = []
+        self.activations = []
+
+        target_layer.register_forward_hook(self.save_activation)
+        target_layer.register_full_backward_hook(self.save_gradient)
+
+    def save_activation(self, module, input, output):
+        self.activations.append(output)
+
+    def save_gradient(self, module, grad_input, grad_output):
+        # Gradients are computed in reverse order
+        self.gradients = [grad_output[0]] + self.gradients
+
+    def __call__(self, x):
+        self.gradients = []
+        self.activations = []
+        return self.model(x)
+
+import torch
+import torch.nn as nn
+import numpy as np
+import torch.nn.functional as F
+
+class FCGradCAM:
+    """ Grad-CAM adapted for Fully Connected Networks (FCNs) """
+
+    def __init__(self, model, target_layer, use_cuda=False):
+        self.model = model.eval()
+        self.target_layer = target_layer  # Typically FC2
+        self.cuda = use_cuda
+        if self.cuda:
+            self.model = model.cuda()
+
+        self.activations = None
+        self.gradients = None
+
+        # Register hooks on the target layer
+        target_layer.register_forward_hook(self.save_activation)
+        target_layer.register_full_backward_hook(self.save_gradient)
+
+    def save_activation(self, module, input, output):
+        """ Store activations from the forward pass """
+        self.activations = output  # Shape: (batch_size, 128)
+
+    def save_gradient(self, module, grad_input, grad_output):
+        """ Store gradients from the backward pass """
+        self.gradients = grad_output[0]  # Shape: (batch_size, 128)
+
+    def __call__(self, input_tensor, target_category=None):
+        if self.cuda:
+            input_tensor = input_tensor.cuda()
+
+        # Forward pass
+        output = self.model(input_tensor)
+
+        # If no target category is given, take the highest-scoring one
+        if target_category is None:
+            target_category = torch.argmax(output, dim=1)
+
+        # Zero gradients
+        self.model.zero_grad()
+
+        # Compute loss w.r.t. the target category
+        loss = output[0, target_category]
+        loss.backward(retain_graph=True)
+
+        # Get activations and gradients
+        activations = self.activations.detach().cpu().numpy()  # Shape: (1, 128)
+        gradients = self.gradients.detach().cpu().numpy()  # Shape: (1, 128)
+
+        # Compute importance weights
+        weights = np.mean(gradients, axis=0)  # Shape: (128,)
+
+        # Compute final CAM as element-wise multiplication
+        cam = weights * activations  # Shape: (1, 128)
+
+        # Normalize heatmap
+        cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam) + 1e-10)  # Shape: (1, 128)
+
+        # Interpolate from (1, 128) → (1, 4000)
+        cam_resized = np.interp(
+            np.linspace(0, 127, input_tensor.shape[1]),  # Target size (4000,)
+            np.linspace(0, 127, 128),  # Original size (128,)
+            cam.squeeze()  # Remove batch dimension
+        )
+
+        return cam_resized  # Shape: (1, 4000)
+
+
+
+
+def update_args_with_hyp(args):
+    """
+    Update args with hyperparameters from a YAML file.
+    Adds new arguments if they are in the YAML file but not in the argparse object.
+    """
+    if args.hyp:
+        with open(args.hyp, 'r') as file:
+            hyp_params = yaml.safe_load(file)
+            for key, value in hyp_params.items():
+                setattr(args, key, value)  # Add or override arguments dynamically
+    return args
+
+
+if __name__=="__main__":
+    import argparse
+    import os
+    import yaml
+    parser = argparse.ArgumentParser(description='Progressive Growing of GANs')
+    parser.add_argument('--exp_name', type=str, default='logFile/Edi_MIR/Edi_MIR_Improved_Incep/', help='Experiment name for logging results')
+    parser.add_argument('--checkpoint', type=str, default="logFile/Leone/Leone_5class_ann/weights/best_checkpoint.pth", help='Path to the model checkpoint')
+    parser.add_argument('--yaml', type=str, default="yaml/Leone/Leone_5class_ann_yaml.yaml", help='Path to the model configuration YAML file')
+    parser.add_argument('--hyp', type=str, default="yaml/Leone/Leone_ann_hyp.yaml", help='input data directoy containing .npy files')
+    parser.add_argument('--save_path', type=str, default='logFile/Leone/Leone_5class_ann/test/heatmap/', help='input data directoy containing .npy files')
+    args = parser.parse_args()
+    args = update_args_with_hyp(args)
+    
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Load model configuration
+    with open(args.yaml, 'r') as file:
+        config = yaml.safe_load(file)
+    # Dataloader
+    test_path = config['test']
+    class_names = config["class_names"]
+    print(class_names)
+    test_loader, config = create_dataloader(config=config, dir=test_path, class_names=class_names, bs=args.test_batch_size, FC=args.FC, shuffle=False)
+
+    # Load model
+    model_args = config.get('model_arguments', {})
+    factory = ModelFactory()
+    model = factory.load_model_from_yaml(config)
+    checkpoint = torch.load(args.checkpoint, map_location=device)
+    model.load_state_dict(checkpoint['model_state'])
+    
+    # for Improved Inception
+    # target_layer = model.IR_PreT.inception2
+    # for PSDN
+    # target_layer = model.IR_PreT.inception1
+    # for trans
+    target_layer = model.fc2
+    
+    # model = InceptionNetwork_PreT(4)
+    # model.load_state_dict(torch.load(args.weight)['model'])
+    # target_layer = model.IR_PreT.inception1
+
+    # model = SpectroscopyTransformerEncoder_PreT(num_classes=4, mlp_size=64)
+    # model.load_state_dict(torch.load(args.weight)['model'])
+    # target_layer = model.IR_PreT.transformer_encoder
+    
+    # model = SpectroscopyTransformerEncoder(num_classes=4, mlp_size=64)
+    # model.load_state_dict(torch.load(args.weight)['model'])
+    # target_layer = model.transformer_encoder
+    
+    
+    net = FCGradCAM(model, target_layer)
+  
+
+
+
+
+
+    # test(args, model, val_dataloader, weight_path, n_classes=len(np.unique(dataarrayY_val)), arch=args.model)
+
+    heatmap0, heatmap1, heatmap2, heatmap3 = None, None, None, None
+    heatmap4, heatmap5, heatmap6, heatmap7, heatmap8 = None, None, None, None, None
+    input_tensors0, input_tensors1, input_tensors2, input_tensors3 = None, None, None, None
+    input_tensors4, input_tensors5, input_tensors6, input_tensors7, input_tensors8 = None, None, None, None, None
+    for input_tensor, labels in test_loader:
+        # inputs, labels = inputs.to(device), labels.to(device)
+        # outputs = model(inputs)
+        # _, predicted = torch.max(outputs.data, 1)
+        output = net(input_tensor)
+        input_tensor1 = input_tensor.numpy().squeeze()
+
+        if labels==0:        
+            if heatmap0 is None:
+                heatmap0 = output
+                input_tensors0 = input_tensor1
+            else:
+                heatmap0 = np.vstack([heatmap0, output])
+                input_tensors0 = np.vstack([input_tensors0, input_tensor1])
+        if labels==1:        
+            if heatmap1 is None:
+                heatmap1 = output
+                input_tensors1 = input_tensor1
+            else:
+                heatmap1 = np.vstack([heatmap1, output])
+                input_tensors1 = np.vstack([input_tensors1, input_tensor1])
+        if labels==2:        
+            if heatmap2 is None:
+                heatmap2 = output
+                input_tensors2 = input_tensor1
+            else:
+                heatmap2 = np.vstack([heatmap2, output])
+                input_tensors2 = np.vstack([input_tensors2, input_tensor1])
+        if labels==3:        
+            if heatmap3 is None:
+                heatmap3 = output
+                input_tensors3 = input_tensor1
+            else:
+                heatmap3 = np.vstack([heatmap3, output])
+                input_tensors3 = np.vstack([input_tensors3, input_tensor1])
+        if labels==4:        
+            if heatmap4 is None:
+                heatmap4 = output
+                input_tensors4 = input_tensor1
+            else:
+                heatmap4 = np.vstack([heatmap4, output])
+                input_tensors4 = np.vstack([input_tensors4, input_tensor1])
+        if labels==5:        
+            if heatmap5 is None:
+                heatmap5 = output
+                input_tensors5 = input_tensor1
+            else:
+                heatmap5 = np.vstack([heatmap3, output])
+                input_tensors5 = np.vstack([input_tensors5, input_tensor1])
+        if labels==6:        
+            if heatmap6 is None:
+                heatmap6 = output
+                input_tensors6 = input_tensor1
+            else:
+                heatmap6 = np.vstack([heatmap6, output])
+                input_tensors6 = np.vstack([input_tensors6, input_tensor1])
+        if labels==7:        
+            if heatmap7 is None:
+                heatmap7 = output
+                input_tensors7 = input_tensor1
+            else:
+                heatmap7 = np.vstack([heatmap7, output])
+                input_tensors7 = np.vstack([input_tensors7, input_tensor1])
+        if labels==8:        
+            if heatmap8 is None:
+                heatmap8 = output
+                input_tensors8 = input_tensor1
+            else:
+                heatmap8 = np.vstack([heatmap8, output])
+                input_tensors8 = np.vstack([input_tensors8, input_tensor1])
+    print(input_tensors0.shape)
+    print(heatmap0.shape)
+    if not os.path.exists(args.save_path):
+        os.mkdir(f"{args.save_path}")
+    np.save(f"{args.save_path}/heatmap0.npy", heatmap0)
+    np.save(f"{args.save_path}/heatmap1.npy", heatmap1)
+    np.save(f"{args.save_path}/heatmap2.npy", heatmap2)
+    np.save(f"{args.save_path}/heatmap3.npy", heatmap3)
+    np.save(f"{args.save_path}/heatmap4.npy", heatmap3)
+    np.save(f"{args.save_path}/heatmap5.npy", heatmap3)
+    np.save(f"{args.save_path}/heatmap6.npy", heatmap3)
+    np.save(f"{args.save_path}/heatmap7.npy", heatmap3)
+    np.save(f"{args.save_path}/heatmap8.npy", heatmap3)
+    np.save(f"{args.save_path}/input_tensors0.npy", input_tensors0)
+    np.save(f"{args.save_path}/input_tensors1.npy", input_tensors1)
+    np.save(f"{args.save_path}/input_tensors2.npy", input_tensors2)
+    np.save(f"{args.save_path}/input_tensors3.npy", input_tensors3)
+    np.save(f"{args.save_path}/input_tensors4.npy", input_tensors3)
+    np.save(f"{args.save_path}/input_tensors5.npy", input_tensors3)
+    np.save(f"{args.save_path}/input_tensors6.npy", input_tensors3)
+    np.save(f"{args.save_path}/input_tensors7.npy", input_tensors3)
+    np.save(f"{args.save_path}/input_tensors8.npy", input_tensors3)
+
+    # This value for Leone dataset
+    selected_indices0 = [109, 130, 112, 163, 23, 175, 139, 157, 30, 1]
+    selected_indices1 = [226, 184, 253, 275, 239, 276, 89, 68, 94, 91]
+    selected_indices2 = [175, 7, 191, 182, 92, 41, 12, 183, 107, 187]
+    selected_indices3 = [3, 104, 73, 28, 20, 2, 67, 68, 109, 88]
+    selected_indices4 = [5, 0, 7, 9, 13, 14, 3, 1, 4, 8]
+    # This value for Jeon dataset
+    # selected_indices = [93, 22, 144, 71, 9, 45, 131, 16, 36, 153]
+    # selected_indices = heatmap_plot(heatmap0, input_tensors0, os.path.join(args.save_path, "0"))
+    # heatmap_plot(heatmap0, input_tensors0, os.path.join(args.save_path, "0"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap1, input_tensors1, os.path.join(args.save_path, "1"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap2, input_tensors2, os.path.join(args.save_path, "2"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap3, input_tensors3, os.path.join(args.save_path, "3"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap4, input_tensors4, os.path.join(args.save_path, "4"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap5, input_tensors5, os.path.join(args.save_path, "5"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap6, input_tensors6, os.path.join(args.save_path, "6"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap7, input_tensors7, os.path.join(args.save_path, "7"), selected_indices=selected_indices)
+    # heatmap_plot(heatmap8, input_tensors8, os.path.join(args.save_path, "8"), selected_indices=selected_indices)
+    selected_indices = heatmap_plot(heatmap0, input_tensors0, os.path.join(args.save_path, "0"))
+    selected_indices = heatmap_plot(heatmap1, input_tensors1, os.path.join(args.save_path, "1"))
+    selected_indices = heatmap_plot(heatmap2, input_tensors2, os.path.join(args.save_path, "2"))
+    selected_indices = heatmap_plot(heatmap3, input_tensors3, os.path.join(args.save_path, "3"))
+    selected_indices = heatmap_plot(heatmap4, input_tensors4, os.path.join(args.save_path, "4"))
+    selected_indices = heatmap_plot(heatmap5, input_tensors5, os.path.join(args.save_path, "5"))
+    selected_indices = heatmap_plot(heatmap6, input_tensors6, os.path.join(args.save_path, "6"))
+    selected_indices = heatmap_plot(heatmap7, input_tensors7, os.path.join(args.save_path, "7"))
+    selected_indices = heatmap_plot(heatmap8, input_tensors8, os.path.join(args.save_path, "8"))
+

@@ -1,0 +1,49 @@
+train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Leone/all_labeled/train/
+val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Leone/all_labeled/val/
+test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Leone/all_labeled/test/
+class_names: 
+  - PE
+  - PET
+  - PP
+  - PS
+
+# train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/classification/data/data_warwick/
+# val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/classification/data/data_warwick/
+# test:
+# class_names: 
+#   - PP
+#   - PET
+#   - LDPE
+#   - HDPE
+
+# model_name: ANN
+# model_arguments:
+#   in_len: 4000
+#   num_classes:  4
+
+# model_name: Transformer
+# model_arguments:
+#   num_transformer_layers: 3
+#   input_size:  4000
+#   num_classes:  4
+#   mlp_size:  64
+#   patch_size:  20
+#   embedding_dim:  20
+#   num_heads:  4
+#   pre_module: True
+
+model_name: PSDN Inception
+model_arguments:
+  num_classes:  4
+  # pre_module: True
+  input_size:  4000
+
+loss_name: cross_entropy
+loss_arguments:
+
+optimizer_name: 'adam'
+optimizer_arguments:
+  lr:  0.01
+  # betas:  [0.9, 0.999]
+  # eps:  1e-8
+  # weight_decay: 0.0
