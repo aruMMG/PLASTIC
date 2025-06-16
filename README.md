@@ -2,11 +2,11 @@
 
 A library of deep learning models for plastic type classification using Infrared (IR) spectroscopic data. It includes models from literature (ANN, CNN) as well as our proposed ANN, CNN, and Transformer-based models designed specifically for this task. Models can be trained and tested easily by modifying YAML configuration files.
 
-![Overview](https://github.com/aruMMG/PLASTIC/blob/main/asset/overview.jpg?raw=true)
+![Overview](https://github.com/aruMMG/PLASTIC/blob/main/asset/overview.jpg?raw=true "Title"))
 
 ## Model Pipeline
 
-![Pipeline](https://github.com/aruMMG/PLASTIC/blob/main/asset/pipeline.jpg?raw=true)
+![Pipeline](https://github.com/aruMMG/PLASTIC/blob/main/asset/pipeline.jpg?raw=true "Title"))
 
 The pipeline consists of two key components:
 1. **Preprocessing module** (optional): Converts raw spectral input into a model-ready format.
