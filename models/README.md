@@ -1,0 +1,2 @@
+This library include models from literature and our proposed ones. The full model pipeline include a optional preprocessing module and DL models. The literature models include: 
+![Alt text](https://github.com/aruMMG/PLASTIC/blob/main/asset/overview.jpg?raw=true "Title")
