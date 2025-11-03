@@ -11,8 +11,8 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from glob import glob
 
 # Paths to dataset folders
-train_path = "/home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/raw/3/train/"
-test_path = "/home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/raw/3/test/"
+train_path = "/home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Leone/all_labeled/5class/withOthers/5/train/"
+test_path = "/home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Leone/all_labeled/5class/withOthers/5/test/"
 
 # ---- PREPROCESSING FUNCTIONS ----
 # import scipy.signal as signal

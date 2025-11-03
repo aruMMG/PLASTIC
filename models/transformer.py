@@ -177,7 +177,8 @@ class SpectroscopyTransformerEncoder_PreT(nn.Module):
 if __name__=="__main__":
     import time
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    input_data = torch.randn(1, 1, 4000).to(device)
+    batch_size = 512
+    input_data = torch.randn(batch_size, 1, 4000).to(device)
     model = SpectroscopyTransformerEncoder_PreT(num_classes=9, pre_module=True)
     model.to(device)
     model.eval()
@@ -192,4 +193,4 @@ if __name__=="__main__":
     print(f"time taken is :", total_time)
     print(f"time taken is avarage:", total_time/1000)
     print(f'Inception model output: {output.shape}')
-    assert output.shape == (1,9), "Output shape is incorrect."
+    assert output.shape == (batch_size,9), "Output shape is incorrect."

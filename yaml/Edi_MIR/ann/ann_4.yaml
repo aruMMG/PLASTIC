@@ -1,6 +1,6 @@
-train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/baseline/4/train/
-val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/baseline/4/val/
-test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/baseline/4/test/
+train: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/sg/4/train/
+val: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/sg/4/val/
+test: /home/singh_a_WMGDS.WMG.WARWICK.AC.UK/wmg/polymer_sort/datasets/Edi_MIR/sg/4/test/
 
 class_names: 
   - PE

@@ -16,7 +16,7 @@ class_names:
 model_name: Transformer
 model_arguments:
   num_transformer_layers: 3
-  input_size:  400
+  input_size:  4000
   num_classes:  9
   mlp_size:  64
   patch_size:  20
